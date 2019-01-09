@@ -1,4 +1,18 @@
 
+--- active sessions with PID ---
+
+SELECT pid, datname, application_name, state, age(query_start, clock_timestamp()), usename, query, wait_event
+FROM pg_stat_activity
+WHERE query NOT ILIKE '%pg_stat_activity%'
+AND usename!='rdsadmin'
+ORDER BY query_start desc;
+  
+--- current holiding locks ----                                                 
+
+SELECT pgl.locktype, pgl.mode, pgc.relname,pgl.pid  , psa.state,psa.query
+FROM pg_locks pgl JOIN pg_class pgc ON pgl.relation=pgc.oid
+JOIN pg_stat_activity psa ON pgl.pid=psa.pid ;
+                                                  
 -- show running queries (9.2)
 
 SELECT pid, age(clock_timestamp(), query_start), usename, query 
