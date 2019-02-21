@@ -29,8 +29,7 @@ SELECT pg_terminate_backend(procpid);
       or 
 SELECT pg_terminate_backend(pid)
     FROM pg_stat_activity
-    WHERE datname = 'db'
-      AND pid <> pg_backend_pid()
+    WHERE pid <> pg_backend_pid()
       AND state = 'idle'
       AND state_change between '2019-01-24 15:47:23.080536-08' and  '2019-01-25 01:47:23.080536-08'
 	                                                  
