@@ -1,0 +1,108 @@
+
+CREATE SCHEMA child_tables
+    AUTHORIZATION edsadmin;
+
+--create one partition for each active month with non-overlapping table constraints 
+
+
+CREATE TABLE child_tables.inventory_movement_y2018m12 (
+CHECK ( report_date >= DATE '2018-12-01' AND report_date < DATE '2019-01-01' )
+) INHERITS (core.inventory_movement);
+
+CREATE TABLE child_tables.inventory_movement_y2019m01 (
+    CHECK ( report_date >= DATE '2019-01-01' AND report_date < DATE '2019-02-01' )
+) INHERITS (core.inventory_movement);
+
+CREATE TABLE child_tables.inventory_movement_y2019m02 (
+    CHECK ( report_date >= DATE '2019-02-01' AND report_date < DATE '2019-03-01' )
+) INHERITS (core.inventory_movement);
+
+CREATE TABLE child_tables.inventory_movement_y2019m03 (
+    CHECK ( report_date >= DATE '2019-03-01' AND report_date < DATE '2019-04-01' )
+) INHERITS (core.inventory_movement);
+
+CREATE TABLE child_tables.inventory_movement_y2019m04 (
+    CHECK ( report_date >= DATE '2019-04-01' AND report_date < DATE '2019-05-01' )
+) INHERITS (core.inventory_movement);
+
+
+CREATE TABLE child_tables.inventory_movement_y2019m05 (
+    CHECK ( report_date >= DATE '2019-05-01' AND report_date < DATE '2019-06-01' )
+) INHERITS (core.inventory_movement);
+
+
+
+--============================================================
+-- create index in partined tables
+
+--============================================================
+
+
+CREATE INDEX inventory_movement_y2018m12_report_date ON child_tables.inventory_movement_y2018m12 (report_date);
+CREATE INDEX inventory_movement_y2019m01_report_date ON child_tables.inventory_movement_y2019m01(report_date);
+CREATE INDEX inventory_movement_y2019m02_report_date ON child_tables.inventory_movement_y2019m02 (report_date);
+CREATE INDEX inventory_movement_y2019m03_report_date ON child_tables.inventory_movement_y2019m03 (report_date);
+CREATE INDEX inventory_movement_y2019m04_report_date ON child_tables.inventory_movement_y2019m04 (report_date);
+CREATE INDEX inventory_movement_y2019m05_report_date ON child_tables.inventory_movement_y2019m05 (report_date);
+
+--============================================================
+/* We must redefine the trigger function each month so that it always points to the current partition.
+The trigger definition does not need to be updated, however.
+We might want to insert data and have the server automatically locate the partition into which the row should be added.
+We could do this with a more complex trigger function, for example: */
+--============================================================
+
+CREATE OR REPLACE FUNCTION child_tables.im_measurement_insert_trigger()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF ( NEW.report_date >= DATE '2018-12-01' AND
+         NEW.report_date < DATE '2019-01-01' ) THEN
+        INSERT INTO child_tables.inventory_movement_y2018m12 VALUES (NEW.*);
+        
+        
+    ELSIF ( NEW.report_date >= DATE '2019-01-01' AND
+            NEW.report_date < DATE '2019-02-01' ) THEN
+            
+        INSERT INTO child_tables.inventory_movement_y2019m01 VALUES (NEW.*);
+
+    ELSIF ( NEW.report_date >= DATE '2019-02-01' AND
+            NEW.report_date < DATE '2019-03-01' ) THEN
+        INSERT INTO child_tables.inventory_movement_y2019m02 VALUES (NEW.*);
+        
+    
+    ELSIF ( NEW.report_date >= DATE '2019-03-01' AND
+            NEW.report_date < DATE '2019-04-01' ) THEN
+        INSERT INTO child_tables.inventory_movement_y2019m03 VALUES (NEW.*);
+        
+        
+    ELSIF ( NEW.report_date >= DATE '2019-04-01' AND
+            NEW.report_date < DATE '2019-05-01' ) THEN
+            
+        INSERT INTO child_tables.inventory_movement_y2019m04 VALUES (NEW.*);
+        
+    ELSIF ( NEW.report_date >= DATE '2019-05-01' AND
+            NEW.report_date < DATE '2019-06-01' ) THEN
+            
+        INSERT INTO child_tables.inventory_movement_y2019m05 VALUES (NEW.*);   
+    ELSE
+        RAISE EXCEPTION 'Date out of range.  Fix the im_measurement_insert_trigger() function!';
+    END IF;
+    RETURN NULL;
+END;
+$$
+LANGUAGE plpgsql;
+
+--============================================================
+
+-- After creating the function, we create a trigger on table which calls the trigger function:
+--============================================================
+
+
+CREATE TRIGGER insert_core_inventory_movement_trigger
+    BEFORE INSERT
+    ON core.inventory_movement
+    FOR EACH ROW
+    EXECUTE PROCEDURE child_tables.im_measurement_insert_trigger();
+
+COMMENT ON TRIGGER insert_core_inventory_movement_trigger ON core.inventory_movement
+    IS 'partition trigger';
