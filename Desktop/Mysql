@@ -19,3 +19,31 @@ inner join information_schema.innodb_trx c on a.requesting_trx_id=c.trx_id;
 
 
 select * from information_schema.INNODB_TRX;
+
+
+
+
+-------------------
+1. Enabling Slow Query Log 
+- slow_query = 1
+- long_query_time = 651
+
+This will capture any statement running for over 10 minutes in the slow query log file.
+
+2. Enabled Enhanced Monitoring with granularity 5 sec
+This is done to capture more graular detail when the CPU is high and give Support Engineers more insight which process is consuming more CPU.
+
+3. Running Profiling on Statements
+The following process helps identify the bottleneck:
+
+-------------------------------------------------------------------------------------------------------------------------------
+Profiling Queries:
+----------------------
+SET SESSION profiling=1;
+Run query - SELECT * FROM table_name WHERE col = ?;
+SHOW PROFILES;
+SELECT * FROM information_schema.profiling WHERE query_id = ? -- from step 3
+           SHOW PROFILE FOR QUERY ? -- from step 3
+SET SESSION PROFILING=0;
+-------------------------------------------------------------------------------------------------------------------------------
+
