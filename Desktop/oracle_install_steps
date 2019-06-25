@@ -1,0 +1,262 @@
+
+log file dir--  /opt/app/oracle/product/rdbms/log
+
+
+step 1, Edit Host file -  vim /etc/hosts
+
+
+172.65.0.175 ip-172-65-0-175.corporate.domine.com ip-172-65-0-175.corporate.domine.com
+
+
+
+step_2  edit kernal parameters vim /etc/sysctl.conf
+
+
+fs.file-max = 6815744
+kernel.sem = 250 32000 100 128
+kernel.shmmni = 4096
+kernel.shmall = 1073741824
+kernel.shmmax = 4398046511104
+net.core.rmem_default = 262144
+net.core.rmem_max = 4194304
+net.core.wmem_default = 262144
+net.core.wmem_max = 1048576
+fs.aio-max-nr = 1048576
+net.ivp4.ip_local_port_range = 9000 65500
+
+
+sysctl -p ---> apply changes
+
+
+step 3 -- edit limits file - vim /etc/security/limits.conf
+
+oracle soft nofile  1024
+oracle hard nofile 65536
+oracle soft nproc 2047
+oracle hard nproc  16384
+oracle soft stack 10240
+oracle hard stack 32768
+
+step 4 - Install below dependencies,  by auto in single package
+
+yum list  oracle-rdbms* ----->> install output package.
+
+or do manually install indivudually by below steps
+
+
+yum install binutils -y
+yum install comapat-libcap1 -y
+yum install comapat-libstdc++-33 -y
+yum install comapat-libstdc++-33.i689 -y
+yum install gcc -y
+yum install gcc-c++ -y
+yum install glibc -y
+yum install glibc.i686 -y
+yum install glibc-devel -y
+yum install glibc-devel.i686 -y
+yum install ksh -y
+yum install libgcc -y
+yum install libgcc.i686 -y
+yum install libstdc++ -y
+yum install libstdc++.i686 -y
+yum install libstdc++-devel -y
+yum install libstdc++-devel.i686 -y
+yum install libaio -y
+yum install libaio.i686 -y
+yum install libaio-devel -y
+yum install libaio-devel.i686 -y
+
+yum install libXext -y
+yum install libXext.i686 -y
+
+yum install libXtst -y
+yum install libXtst.i686 -y
+
+yum install libXau -y
+yum install libXau.i686 -y
+
+yum install libxcb -y
+yum install libxcb.i686 -y
+
+yum install libXi -y
+yum install libXi.i686 -y
+yum install make -y
+yum install sysstat -y
+yum install unixODBC -y
+yum install unixODBC-devel -y
+yum install xorg-x11* -y
+
+step 5 - Add Group and Users
+
+groupadd -g 54321 oinstall
+groupadd -g 54322 orcladmin
+groupadd -g 54323 oper
+groupadd -g 54324 orcalegrid
+
+useradd -u 543211 -g oinstall -G orcladmin,oper,orcalegrid oracle
+
+passwd oracle
+
+Tmobile@123
+
+Step 6  -- vim  /etc/security/limits.d/90-nproc.conf
+
+# Change this
+*   soft nproc  1024
+
+# to this
+
+* - nproc 16384
+
+
+Step 7 -  set SELINUX, vim /etc/sysconfig/selinux
+
+
+SELINUX=permissive
+
+run the command after edit setenforce Permissive
+
+
+Step 8 - stop firewall
+
+
+# service iptables stop
+# chkconfig iptables off
+
+
+Step 9 - Create directories for orale installation
+
+--- home and base directories ---- 
+mkdir -p /opt/oracle/product/12.1.0.1/orcldb
+chown -R oracle:oinstall /opt/oracle 
+chmod -R 755 /opt/oracle
+
+---Inventory directory---
+
+mkdir  -p /home/oracle/oracle_Inventery/
+chown -R oracle:oinstall /home/oracle/oracle_Inventery
+chmod -R 755 /home/oracle/oracle_Inventery
+
+----- Grind directory when want to install grid -- 
+
+mkdir  -p /home/oracle/grid
+chown -R oracle:oinstall /home/oracle/grid
+chmod -R 755 /home/oracle/grid
+
+
+Step 11 - Edit bash profile for oracle user /home/oracle/.bash_profile
+
+
+# Oracle setting
+
+export TMP=/tmp
+export TMPDIR=$TMP
+
+export ORACLE_HOSTNAME=devplhdpx0051.unix.gsm1900.org
+export ORACLE_UNQNAME=rql
+export ORACLE_BASE=/opt/app/oracle
+export ORACLE_HOME=$ORACLE_BASE/product/
+export ORACLE_SID=rql
+
+export PATH=/usr/sbin:$PATH
+export PATH=$ORACLE_HOME/bin:$PATH
+
+export LD_LIBRARY_PATH=$ORACLE_HOME/lib:/lib:/usr/lib
+export CLASSPATH=$ORACLE_HOME/jlib:$ORACLE_HOME/rdbms/jlib
+
+--- apply changes ---
+source ~/.bash_profile
+
+
+
+
+step - 12 Extract installation files
+
+su - oracle
+
+
+wget xxx.com
+
+unzip db file  from oracle websites
+
+
+
+
+step 13,
+
+mv /home/oracle/database/responce/db_install.rsp   /opt/oracle/
+vim /opt/oracle/db_install.rsp
+
+
+./runInstaller -silent -responseFile /opt/oracle/db_install.rsp
+
+
+
+------------------------------------------
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
