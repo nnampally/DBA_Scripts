@@ -74,4 +74,4 @@ FROM (
     JOIN pg_am am ON s2.relam = am.oid WHERE am.amname = 'btree'
 ) AS sub
 -- WHERE NOT is_na
-ORDER BY 2,3,4;
+ORDER BY bloat_ratio desc;
