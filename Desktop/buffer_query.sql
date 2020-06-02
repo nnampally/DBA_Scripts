@@ -44,8 +44,11 @@ SELECT sum(heap_blks_read) as heap_read, sum(heap_blks_hit)  as heap_hit, (sum(h
 FROM pg_statio_user_tables;
 
 -- table index usage rates (should not be less than 0.99)
-SELECT relname,  n_live_tup rows_in_table , 
+
+SELECT schemaname,relname,  n_live_tup rows_in_table , 
 100 * idx_scan / (seq_scan + idx_scan) percent_of_times_index_used 
 FROM pg_stat_user_tables 
 where seq_scan + idx_scan > 0 
-ORDER BY n_live_tup DESC;
+and 100 * idx_scan / (seq_scan + idx_scan) < 60
+and n_live_tup > 100
+ORDER BY percent_of_times_index_used DESC;
