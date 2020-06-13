@@ -44,47 +44,9 @@ yum list  oracle-rdbms* ----->> install output package.
 or do manually install indivudually by below steps
 
 
-yum install binutils -y
-yum install comapat-libcap1 -y
-yum install comapat-libstdc++-33 -y
-yum install comapat-libstdc++-33.i689 -y
-yum install gcc -y
-yum install gcc-c++ -y
-yum install glibc -y
-yum install glibc.i686 -y
-yum install glibc-devel -y
-yum install glibc-devel.i686 -y
-yum install ksh -y
-yum install libgcc -y
-yum install libgcc.i686 -y
-yum install libstdc++ -y
-yum install libstdc++.i686 -y
-yum install libstdc++-devel -y
-yum install libstdc++-devel.i686 -y
-yum install libaio -y
-yum install libaio.i686 -y
-yum install libaio-devel -y
-yum install libaio-devel.i686 -y
-
-yum install libXext -y
-yum install libXext.i686 -y
-
-yum install libXtst -y
-yum install libXtst.i686 -y
-
-yum install libXau -y
-yum install libXau.i686 -y
-
-yum install libxcb -y
-yum install libxcb.i686 -y
-
-yum install libXi -y
-yum install libXi.i686 -y
-yum install make -y
-yum install sysstat -y
-yum install unixODBC -y
-yum install unixODBC-devel -y
-yum install xorg-x11* -y
+yum install -y binutils comapat-libcap1  comapat-libstdc++-33  comapat-libstdc++-33.i689  gcc  gcc-c++  glibc glibc.i686  glibc-devel  glibc-devel.i686 
+ksh  libgcc  libgcc.i686  libstdc++  libstdc++.i686  libstdc++-devel  libstdc++-devel.i686  libaio  libaio.i686  libaio-devel  libaio-devel.i686  libXext 
+ libXext.i686  libXtst  libXtst.i686  libXau  libXau.i686  libxcb  libxcb.i686  libXi  libXi.i686  make  sysstat  unixODBC  unixODBC-devel  xorg-x11* 
 
 step 5 - Add Group and Users
 
