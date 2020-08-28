@@ -1,8 +1,8 @@
-SELECT s.schemaname||'.'||s.relname AS tablename,
-       s.indexrelname AS indexname,
-       pg_relation_size(s.indexrelid) AS index_size,
-	   i_s.indexdef,
-	   'DROP INDEX '|| s.schemaname||'.'||s.indexrelname ||';' as DROP_Statment
+SELECT s.schemaname||'.'||s.relname AS "TABLENAME",
+       s.indexrelname AS "INDEXNAME",
+       pg_relation_size(s.indexrelid)/1024/1024/1024 AS "INDEX_SIZE_IN_GB",
+	   i_s.indexdef||';' as "INDEX_DDL",
+	   'DROP INDEX '|| s.schemaname||'.'||s.indexrelname ||';' as "DROP_STATEMENT"
 FROM pg_catalog.pg_stat_user_indexes s
    JOIN pg_catalog.pg_index i ON s.indexrelid = i.indexrelid
    JOIN pg_catalog.pg_indexes i_s on s.indexrelname = i_s.indexname
