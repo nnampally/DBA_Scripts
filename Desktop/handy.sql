@@ -1,3 +1,9 @@
+-- Users with query --
+
+select r.rolname as user_name, s.query,s.calls as Number_of_times_calls
+from pg_stat_statements s
+join pg_roles r on s.userid=r.oid
+where s.userid != 10;
 
 
 --- active sessions with PID ---
