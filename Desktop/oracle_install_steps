@@ -1,16 +1,120 @@
 
-log file dir--  /opt/app/oracle/product/rdbms/log
+Install Oracle Database 18C in silent mode on OEL7
+Posted on October 25, 2018
+This article presents how to install Oracle 18C on Oracle Enterprise Linux 7 (OEL7) in silent mode.
 
 
-step 1, Edit Host file -  vim /etc/hosts
+Read following article how to install Oracle Enterprise Linux 7: Install Oracle Linux 7 (OEL7) (for comfort set 8G memory for your virtual machine before proceeding with Oracle software installation).
 
+Software
 
-172.65.0.175 ip-172-65-0-175.corporate.domine.com ip-172-65-0-175.corporate.domine.com
+Software for 12CR2 is available on OTN or edelivery
 
+OTN: Oracle Database 18c Software (64-bit).
+edelivery: Oracle Database 18c Software (64-bit)
+Database software
 
+LINUX.X64_180000_db_home.zip
+OS configuration and preparation
 
-step_2  edit kernal parameters vim /etc/sysctl.conf
+OS configuration is executed as root. To login as root just execute following command in terminal.
 
+su - root
+The “/etc/hosts” file must contain a fully qualified name for the server.
+
+<IP-address>  <fully-qualified-machine-name>  <machine-name>
+For example.
+
+127.0.0.1 oel7 oel7.dbaora.com localhost.localdomain localhost
+Set hostname
+
+hostnamectl set-hostname oel7.dbaora.com --static
+Add groups
+
+#groups for database management
+groupadd -g 54321 oinstall
+groupadd -g 54322 dba
+groupadd -g 54323 oper
+groupadd -g 54324 backupdba
+groupadd -g 54325 dgdba
+groupadd -g 54326 kmdba
+groupadd -g 54327 asmdba
+groupadd -g 54328 asmoper
+groupadd -g 54329 asmadmin
+groupadd -g 54330 racdba
+Add user Oracle for database software
+
+useradd -u 54321 -g oinstall \
+-G dba,oper,backupdba,dgdba,kmdba,racdba oracle
+Change password for user Oracle
+
+passwd oracle
+Packages
+
+Check which packages are installed and which are missing
+
+rpm -q --qf '%{NAME}-%{VERSION}-%{RELEASE}(%{ARCH})\n' bc \
+binutils \
+compat-libcap1 \
+compat-libstdc++-33 \
+elfutils-libelf \
+elfutils-libelf-devel \
+fontconfig-devel \
+glibc \
+glibc-devel \
+ksh \
+libaio \
+libaio-devel \
+libX11 \
+libXau \
+libXi \
+libXtst \
+libgcc \
+librdmacm-devel \
+libstdc++ \
+libstdc++-devel \
+libxcb \
+make \
+smartmontools \
+sysstat
+If you have information that librdmacm-devel is not installed probably you can ignore it
+
+[root@oel7 ~]# yum install librdmacm-devel
+Loaded plugins: langpacks, ulninfo
+Package librdmacm-devel-1.1.0-2.el7.x86_64 is obsoleted 
+by rdma-core-devel-15-7.el7_5.x86_64 which is already installed
+and extra packages if you want. I don’t install them
+
+(for Oracle ACFS Remote)
+
+targetcli 
+python 
+python-configshell 
+python-rtslib 
+python-six
+
+(for Oracle ACFS)
+
+nfs-utils
+
+(for Oracle RAC and Oracle Clusterware)
+
+net-tools
+You can install missing packages from dvd. Just mount it and install missing packages using rpm -Uvh command from directory <mount dvd>/Packages or by using yum install command.
+
+NOTE – I’m using x86_64 version of packages
+
+First option from dvd
+
+rpm -Uvh libaio-devel*.x86_64.rpm
+rpm -Uvh ksh*.x86_64.rpm
+Second option using yum install command. It requires access to internet.
+
+yum install libaio-devel*.x86_64
+yum install ksh*.x86_64
+Add kernel parameters to /etc/sysctl.conf
+
+# kernel parameters for 18C installation
 
 fs.file-max = 6815744
 kernel.sem = 250 32000 100 128
@@ -22,144 +126,522 @@ net.core.rmem_max = 4194304
 net.core.wmem_default = 262144
 net.core.wmem_max = 1048576
 fs.aio-max-nr = 1048576
-net.ivp4.ip_local_port_range = 9000 65500
+net.ipv4.ip_local_port_range = 9000 65500
+kernel.panic_on_oops=1
+Apply kernel parameters
 
+/sbin/sysctl -p
+Add following lines to set shell limits for user oracle in file /etc/security/limits.conf
 
-sysctl -p ---> apply changes
+# shell limits for users oracle 18C
 
+oracle   soft   nofile   1024
+oracle   hard   nofile   65536
+oracle   soft   nproc    2047
+oracle   hard   nproc    16384
+oracle   soft   stack    10240
+oracle   hard   stack    32768
+oracle   soft   memlock  3145728
+oracle   hard   memlock  3145728
+Disable firewall
 
-step 3 -- edit limits file - vim /etc/security/limits.conf
+service iptables stop
+chkconfig iptables off
+Additional steps
 
-oracle soft nofile  1024
-oracle hard nofile 65536
-oracle soft nproc 2047
-oracle hard nproc  16384
-oracle soft stack 10240
-oracle hard stack 32768
+Add following lines in .bash_profile for user oracle
 
-step 4 - Install below dependencies,  by auto in single package
-
-yum list  oracle-rdbms* ----->> install output package.
-
-or do manually install indivudually by below steps
-
-
-yum install -y binutils comapat-libcap1  comapat-libstdc++-33  comapat-libstdc++-33.i689  gcc  gcc-c++  glibc glibc.i686  glibc-devel  glibc-devel.i686 
-ksh  libgcc  libgcc.i686  libstdc++  libstdc++.i686  libstdc++-devel  libstdc++-devel.i686  libaio  libaio.i686  libaio-devel  libaio-devel.i686  libXext 
- libXext.i686  libXtst  libXtst.i686  libXau  libXau.i686  libxcb  libxcb.i686  libXi  libXi.i686  make  sysstat  unixODBC  unixODBC-devel  xorg-x11* 
-
-step 5 - Add Group and Users
-
-groupadd -g 54321 oinstall
-groupadd -g 54322 orcladmin
-groupadd -g 54323 oper
-groupadd -g 54324 orcalegrid
-
-useradd -u 543211 -g oinstall -G orcladmin,oper,orcalegrid oracle
-
-passwd oracle
-
-Tmobile@123
-
-Step 6  -- vim  /etc/security/limits.d/90-nproc.conf
-
-# Change this
-*   soft nproc  1024
-
-# to this
-
-* - nproc 16384
-
-
-Step 7 -  set SELINUX, vim /etc/sysconfig/selinux
-
-
-SELINUX=permissive
-
-run the command after edit setenforce Permissive
-
-
-Step 8 - stop firewall
-
-
-# service iptables stop
-# chkconfig iptables off
-
-
-Step 9 - Create directories for orale installation
-
---- home and base directories ---- 
-mkdir -p /opt/oracle/product/12.1.0.1/orcldb
-chown -R oracle:oinstall /opt/oracle 
-chmod -R 755 /opt/oracle
-
----Inventory directory---
-
-mkdir  -p /home/oracle/oracle_Inventery/
-chown -R oracle:oinstall /home/oracle/oracle_Inventery
-chmod -R 755 /home/oracle/oracle_Inventery
-
------ Grind directory when want to install grid -- 
-
-mkdir  -p /home/oracle/grid
-chown -R oracle:oinstall /home/oracle/grid
-chmod -R 755 /home/oracle/grid
-
-
-Step 11 - Edit bash profile for oracle user /home/oracle/.bash_profile
-
-
-# Oracle setting
-
+# Oracle Settings
 export TMP=/tmp
-export TMPDIR=$TMP
 
-export ORACLE_HOSTNAME=devplhdpx0051.unix.gsm1900.org
-export ORACLE_UNQNAME=rql
-export ORACLE_BASE=/opt/app/oracle
-export ORACLE_HOME=$ORACLE_BASE/product/
-export ORACLE_SID=rql
+export ORACLE_HOSTNAME=oel7.dbaora.com
+export ORACLE_UNQNAME=ORA18C
+export ORACLE_BASE=/ora01/app/oracle
+export ORACLE_HOME=$ORACLE_BASE/product/18.0.0.0/db_1
+export ORACLE_SID=ORA18C
 
-export PATH=/usr/sbin:$PATH
-export PATH=$ORACLE_HOME/bin:$PATH
+PATH=/usr/sbin:$PATH:$ORACLE_HOME/bin
 
-export LD_LIBRARY_PATH=$ORACLE_HOME/lib:/lib:/usr/lib
-export CLASSPATH=$ORACLE_HOME/jlib:$ORACLE_HOME/rdbms/jlib
+export LD_LIBRARY_PATH=$ORACLE_HOME/lib:/lib:/usr/lib;
+export CLASSPATH=$ORACLE_HOME/jlib:$ORACLE_HOME/rdbms/jlib;
 
---- apply changes ---
-source ~/.bash_profile
+alias cdob='cd $ORACLE_BASE'
+alias cdoh='cd $ORACLE_HOME'
+alias tns='cd $ORACLE_HOME/network/admin'
+alias envo='env | grep ORACLE'
+
+umask 022
+
+if [ $USER = "oracle" ]; then
+    if [ $SHELL = "/bin/ksh" ]; then
+       ulimit -u 16384 
+       ulimit -n 65536
+    else
+       ulimit -u 16384 -n 65536
+    fi
+fi
+
+envo
+Directory structure
+
+Create directory structure as user root
+
+ORACLE_BASE – /ora01/app/oracle
+
+ORACLE_HOME – /ora01/app/oracle/product/18.0.0.0/db_1
+
+mkdir -p /ora01/app/oracle/product/18.0.0.0/db_1
+chown oracle:oinstall -R /ora01
+SSH server
+
+I use it for later connection as user oracle in GNOME using command ssh oracle@oel7.dbaora.com -X. Without it it won’t be possible to run X interfaces like Oracle Universal Installer.
+
+Install ssh server. It should be already installed.
+
+yum install openssh-server
+start ssh server
+
+systemctl start sshd
+verify it works
+
+systemctl status sshd
+Install database software
+
+Let’s start with database software installation as oracle user. Usually I’m connected as user root in GNOME so you need to use ssh.
+
+Connect as user oracle
+
+[root@oel7 ~]# ssh oracle@oel7.dbaora.com -X
+Let’s start with database software installation as oracle user. Copy zip to ORACLE_HOME directory and then uznip it. It’s ready binaries !
+
+[oracle@oel7 ~]$ 
+cp LINUX.X64_180000_db_home.zip /ora01/app/oracle/product/18.0.0.0/db_1
+cd /ora01/app/oracle/product/18.0.0.0/db_1
+unzip LINUX.X64_180000_db_home.zip
+after unzip you should see following
+
+[oracle@oel7 db_1]$ pwd
+/ora01/app/oracle/product/18.0.0.0/db_1
+[oracle@oel7 db_1]$ ls
+addnode cv drdaas javavm mgw ord precomp schagent.conf suptools
+apex data dv jdbc network ordim QOpatch sdk ucp
+assistants dbjava env.ora jdk nls ords R slax usm
+bin dbs has jlib odbc oss racg sqldeveloper utl
+clone deinstall hs ldap olap oui rdbms sqlj 
+LINUX.X64_180000_db_home.zip crs demo install lib OPatch owm relnotes 
+sqlpatch wwg css diagnostics instantclient log opmn perl root.sh 
+sqlplus xdk ctx dmu inventory md oracore plsql runInstaller srvm
+check environment settings
+
+--I defined 4 aliases in .bash_profile of user oracle to make 
+--administration easier :)
+
+[oracle@oel7 ~]$ alias envo tns cdoh cdob
+alias envo='env | grep ORACLE'
+alias tns='cd $ORACLE_HOME/network/admin'
+alias cdoh='cd $ORACLE_HOME'
+alias cdob='cd $ORACLE_BASE'
+
+--run alias command envo to display environment settings
+[oracle@oel7 ~]$ envo
+ORACLE_UNQNAME=ORA18C
+ORACLE_SID=ORA18C
+ORACLE_BASE=/ora01/app/oracle
+ORACLE_HOSTNAME=oel7.dbaora.com
+ORACLE_HOME=/ora01/app/oracle/product/18.0.0.0/db_1
+
+--run alias command cdob and cdoh 
+--to check ORACLE_BASE, ORACLE_HOME 
+[oracle@oel7 ~]$ cdob
+[oracle@oel7 oracle]$ pwd
+/ora01/app/oracle
+
+[oracle@oel7 ~]$ cdoh
+[oracle@oel7 db_1]$ pwd
+/ora01/app/oracle/product/18.0.0.0/db_1
+Response files
+
+Once Oracle 18C binaries are unzipped. In followinf directories you can find response files that stores parameters necessary to install Oracle components:
+
+directory	reponse file	
+$ORACLE_HOME/install/response	db_install.rsp	
+$ORACLE_HOME/assistants/dbca	dbca.rsp	
+$ORACLE_HOME/assistants/netca	netca.rsp	
+db_install.rsp – used to install oracle binaries, install/upgrade a database in silent mode
+dbca.rsp – used to install/configure/delete a database in silent mode
+netca.rsp – used to configure simple network for oracle database in silent mode
+[oracle@oel7 response]$ cd $ORACLE_HOME/install/response
+
+[oracle@oel7 response]$ pwd
+/ora01/app/oracle/product/18.0.0.0/db_1/install/response
+
+[oracle@oel7 response]$ ls *.rsp
+db_install.rsp
+[oracle@oel7 dbca]$ cd $ORACLE_HOME/assistants/dbca
+
+[oracle@oel7 dbca]$ pwd
+/ora01/app/oracle/product/18.0.0.0/db_1/assistants/dbca
+
+[oracle@oel7 dbca]$ ls *.rsp
+dbca.rsp
+[oracle@oel7 dbca]$ cd $ORACLE_HOME/assistants/netca
+
+[oracle@oel7 netca]$ pwd
+/ora01/app/oracle/product/18.0.0.0/db_1/assistants/netca
+
+[oracle@oel7 netca]$ ls *.rsp
+netca.rsp
+Install Oracle binaries
+
+It’s the best to preserve original response file db_install.rsp before editing it
+
+[oracle@oel7 response]$ cp db_install.rsp db_install.rsp.bck
+Edit file db_install.rsp to set parameters required to install binaries. This is just example and in next releases parameters can be different. Each of presented parameter is very well described in db_install.rsp. I just give here brief explanations.
+
+--------------------------------------------
+-- force to install only database software
+--------------------------------------------
+oracle.install.option=INSTALL_DB_SWONLY
+
+--------------------------------------------
+-- set unix group for oracle inventory
+--------------------------------------------
+UNIX_GROUP_NAME=oinstall
+
+--------------------------------------------
+-- set directory for oracle inventory
+--------------------------------------------
+INVENTORY_LOCATION=/ora01/app/oraInventory
+
+--------------------------------------------
+-- set oracle home for binaries
+--------------------------------------------
+ORACLE_HOME=/ora01/app/oracle/product/18.0.0.0/db_1
+
+--------------------------------------------
+-- set oracle home for binaries
+--------------------------------------------
+ORACLE_BASE=/ora01/app/oracle
+
+--------------------------------------------
+-- set version of binaries to install
+-- EE - enterprise edition
+--------------------------------------------
+oracle.install.db.InstallEdition=EE
+
+--------------------------------------------
+-- specify extra groups for database management
+--------------------------------------------
+oracle.install.db.OSDBA_GROUP=dba
+oracle.install.db.OSOPER_GROUP=oper
+oracle.install.db.OSBACKUPDBA_GROUP=backupdba
+oracle.install.db.OSDGDBA_GROUP=dgdba
+oracle.install.db.OSKMDBA_GROUP=kmdba
+oracle.install.db.OSRACDBA_GROUP=racdba
+once edition is completed. Start binaries installation.
+
+cd /ora01/app/oracle/product/18.0.0.0/db_1
+./runInstaller -silent \
+-responseFile /ora01/app/oracle/product/18.0.0.0/db_1/install/response/db_install.rsp
+output is following
+
+[oracle@oel7 db_1]$ ./runInstaller -silent -responseFile 
+/ora01/app/oracle/product/18.0.0.0/db_1/install/response/db_install.rsp
+Launching Oracle Database Setup Wizard...
+
+[WARNING] [INS-13014] Target environment does not meet 
+some optional requirements.
+   CAUSE: Some of the optional prerequisites are not met. 
+See logs for details. installActions2018-10-25_08-46-43PM.log
+   ACTION: Identify the list of failed prerequisite checks 
+from the log: installActions2018-10-25_08-46-43PM.log. 
+Then either from the log file or from installation manual 
+find the appropriate configuration to meet the prerequisites 
+and fix it manually.
+The response file for this session can be found at:
+/ora01/app/oracle/product/18.0.0.0/db_1/install/response/db_2018-10-25_08-46-43PM.rsp
+
+You can find the log of this install session at:
+ /tmp/InstallActions2018-10-25_08-46-43PM/installActions2018-10-25_08-46-43PM.log
+
+As a root user, execute the following script(s):
+	1. /ora01/app/oraInventor/orainstRoot.sh
+	2. /ora01/app/oracle/product/18.0.0.0/db_1/root.sh
+
+Execute /ora01/app/oraInventor/orainstRoot.sh 
+on the following nodes: [oel7]
+Execute /ora01/app/oracle/product/18.0.0.0/db_1/root.sh 
+on the following nodes: [oel7]
+
+Successfully Setup Software with warning(s).
+Moved the install session logs to:
+ /ora01/app/oraInventor/logs/InstallActions2018-10-25_08-46-43PM
+I got warnings about memory Oracle requires 8GB ram but VirtualBox consumed 128MB for VideoMemory.
+
+you are asked to run two scripts as user root. Once it’s done binaries are installed. I’m not sure if it’s necessary from previous logs it looks it’s already done
+
+[root@oel7 /]# 
+/ora01/app/oraInventor/orainstRoot.sh
+/ora01/app/oracle/product/18.0.0.0/db_1/root.sh
+quick binary verification
+
+[oracle@oel7 db_1]$ sqlplus / as sysdba
+
+SQL*Plus: Release 18.0.0.0.0 - Production on Thu Oct 25 21:04:44 2018
+Version 18.3.0.0.0
+
+Copyright (c) 1982, 2018, Oracle.  All rights reserved.
+
+Connected to an idle instance.
+
+SQL>
+Configure Oracle Net
+
+Again based on response file Oracle Net will be configured
+
+cd /ora01/app/oracle/product/18.0.0.0/db_1/assistants/netca
+cp netca.rsp netca.rsp.bck
+You can edit netca.rsp to set own parameters. I didn’t changed anything here. So just start standard configuration. It will configure LISTENER with standard settings.
+
+netca -silent -responseFile /ora01/app/oracle/product/18.0.0.0/db_1/assistants/netca/netca.rsp
+[oracle@oel7 netca]$ netca -silent -responseFile 
+/ora01/app/oracle/product/18.0.0.0/db_1/assistants/netca/netca.rsp
+
+Parsing command line arguments:
+    Parameter "silent" = true
+    Parameter "responsefile" = 
+/ora01/app/oracle/product/18.0.0.0/db_1/assistants/netca/netca.rsp
+Done parsing command line arguments.
+Oracle Net Services Configuration:
+Profile configuration complete.
+Oracle Net Listener Startup:
+    Running Listener Control: 
+    /ora01/app/oracle/product/18.0.0.0/db_1/bin/lsnrctl start LISTENER
+    Listener Control complete.
+    Listener started successfully.
+Listener configuration complete.
+Oracle Net Services configuration successful. The exit code is 0
+Check LISTENER status
+
+[oracle@oel7 netca]$ lsnrctl status
+
+LSNRCTL for Linux: Version 18.0.0.0.0 - Production on 25-OCT-2018 21:15:04
+
+Copyright (c) 1991, 2018, Oracle. All rights reserved.
+
+Connecting to (DESCRIPTION=(ADDRESS=(PROTOCOL=TCP)(HOST=oel7.dbaora.com)(PORT=1521)))
+STATUS of the LISTENER
+------------------------
+Alias LISTENER
+Version TNSLSNR for Linux: Version 18.0.0.0.0 - Production
+Start Date 25-OCT-2018 21:13:51
+Uptime 0 days 0 hr. 1 min. 13 sec
+Trace Level off
+Security ON: Local OS Authentication
+SNMP OFF
+Listener Parameter File /ora01/app/oracle/product/18.0.0.0/db_1/network/admin/listener.ora
+Listener Log File /ora01/app/oracle/diag/tnslsnr/oel7/listener/alert/log.xml
+Listening Endpoints Summary...
+(DESCRIPTION=(ADDRESS=(PROTOCOL=tcp)(HOST=oel7.dbaora.com)(PORT=1521)))
+(DESCRIPTION=(ADDRESS=(PROTOCOL=ipc)(KEY=EXTPROC1521)))
+The listener supports no services
+The command completed successfully
+Configure database
+
+The last setup is to create new container database ORA18C.dbaora.com with one pluggable database PORA18C1 and configure and enable oracle db express
+
+Prepare directories for database datafiles and flash recovery area
+
+mkdir /ora01/app/oracle/oradata
+mkdir /ora01/app/oracle/flash_recovery_area
+backup original response file for dbca
+
+cd /ora01/app/oracle/product/18.0.0.0/db_1/assistants/dbca
+
+cp dbca.rsp dbca.rsp.bck
+vi dbca.rsp
+set own parameters
+
+--------------------------------------------
+-- global database name
+--------------------------------------------
+gdbName=ORA18C.dbaora.com
+
+--------------------------------------------
+-- instance database name
+--------------------------------------------
+sid=ORA12C
+
+--------------------------------------------
+--create container database
+--------------------------------------------
+createAsContainerDatabase=true
+
+--------------------------------------------
+-- number of pluggable databases
+--------------------------------------------
+numberOfPDBs=1
+
+--------------------------------------------
+-- list of pluggable databases
+--------------------------------------------
+pdbName=PORA12C1
+
+--------------------------------------------
+-- pluggable administrator password
+--------------------------------------------
+pdbAdminPassword=Oracle18c#
+
+--------------------------------------------
+-- template name used to create database
+--------------------------------------------
+templateName=General_Purpose.dbc
+
+--------------------------------------------
+-- password for user sys
+--------------------------------------------
+sysPassword=Oracle18c#
+
+--------------------------------------------
+-- password for user system
+--------------------------------------------
+systemPassword=Oracle12c
+
+--------------------------------------------
+-- configure dbexpress with port 5500
+--------------------------------------------
+emConfiguration=DBEXPRESS
+emExpressPort=5510
+
+--------------------------------------------
+-- password for dbsnmp user
+--------------------------------------------
+dbsnmpPassword=Oracle18c#
+
+--------------------------------------------
+-- default directory for oracle database datafiles
+--------------------------------------------
+datafileDestination=/ora01/app/oracle/oradata
+
+--------------------------------------------
+-- default directory for flashback data
+--------------------------------------------
+recoveryAreaDestination=/ora01/app/oracle/flash_recovery_area
+
+--------------------------------------------
+-- storage used for database installation
+-- FS - OS filesystem
+--------------------------------------------
+storageType=FS
+
+--------------------------------------------
+-- database character set
+--------------------------------------------
+characterSet=AL32UTF8
+
+--------------------------------------------
+-- national database character set
+--------------------------------------------
+nationalCharacterSet=AL16UTF16
+
+--------------------------------------------
+-- listener name to register database to
+--------------------------------------------
+listeners=LISTENER
+
+--------------------------------------------
+-- force to install sample schemas on the database
+--------------------------------------------
+sampleSchema=true
+
+--------------------------------------------
+--specify database type
+--has influence on some instance parameters
+--------------------------------------------
+databaseType=OLTP
+
+--------------------------------------------
+-- defines size of memory used by the database
+--------------------------------------------
+totalMemory=4096
+run database installation
+
+dbca -silent -createDatabase \
+-responseFile /ora01/app/oracle/product/18.0.0.0/db_1/assistants/dbca/dbca.rsp
+Example output
+
+[oracle@oel7 dbca]$ dbca -silent -createDatabase \
+-responseFile /ora01/app/oracle/product/18.0.0.0/db_1/assistants/dbca/dbca.rsp
+Prepare for db operation
+8% complete
+Copying database files
+31% complete
+Creating and starting Oracle instance
+32% complete
+36% complete
+
+40% complete
+43% complete
+46% complete
+Completing Database Creation
+51% complete
+54% complete
+Creating Pluggable Databases
+58% complete
+77% complete
+Executing Post Configuration Actions
+100% complete
+Database creation complete. For details check the logfiles at:
+ /ora01/app/oracle/cfgtoollogs/dbca/ORA18C.
+Database Information:
+Global Database Name:ORA18C.dbaora.com
+System Identifier(SID):ORA18C
+Look at the log file 
+"/ora01/app/oracle/cfgtoollogs/dbca/ORA18C/ORA18C.log" 
+for further details.
+Verify connection
+
+[oracle@oel7 dbca]$ sqlplus / as sysdba
+
+SQL*Plus: Release 18.0.0.0.0 - Production on Thu Oct 25 21:54:53 2018
+Version 18.3.0.0.0
+
+Copyright (c) 1982, 2018, Oracle.  All rights reserved.
 
 
+Connected to:
+Oracle Database 18c Enterprise Edition Release 18.0.0.0.0 - Production
+Version 18.3.0.0.0
 
+SQL> show parameter db_name
 
-step - 12 Extract installation files
+NAME	 TYPE    VALUE
+-------- ------- -------
+db_name  string  ORA18C
 
-su - oracle
+SQL> alter session set container=PORA18C1;
 
+Session altered.
 
-wget xxx.com
+SQL> show con_id
 
-unzip db file  from oracle websites
+CON_ID
+------------------------------
+3
+SQL> show con_name
 
+CON_NAME
+------------------------------
+PORA18C1
+SQL>
+Check port status of db express in root database
 
+SQL> select DBMS_XDB_CONFIG.GETHTTPSPORT 
+from dual;
 
-
-step 13,
-
-mv /home/oracle/database/responce/db_install.rsp   /opt/oracle/
-vim /opt/oracle/db_install.rsp
-
-
-./runInstaller -silent -responseFile /opt/oracle/db_install.rsp
-
-
-
-------------------------------------------
-
-
-
-
-
+GETHTTPSPORT
+------------
+    550
 
 
 
