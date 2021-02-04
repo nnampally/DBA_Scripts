@@ -60,3 +60,11 @@ DECLARE
       RETURN NULL;
     END;
 $BODY$;
+
+
+CREATE TRIGGER insert_core_inventory_movement_trigger
+    BEFORE INSERT, update,delete
+    ON core.inventory_movement
+    FOR EACH ROW
+    EXECUTE PROCEDURE func_inventory_movement_insert_trigger();
+
