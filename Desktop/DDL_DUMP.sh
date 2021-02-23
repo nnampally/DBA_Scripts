@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 
 echo  "Enter schema name: "
 read schema_name
