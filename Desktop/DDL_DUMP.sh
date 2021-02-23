@@ -1,8 +1,8 @@
 #!/bin/sh
 
-echo  "Enter schema name: "
+echo  "Enter the schema name: "
 read schema_name
-#echo $schema_name
+# Select
 echo "Dump type Tables/Functions/Sequences/Triggers/Views: "
 read sub_dir
 host="localhost"
