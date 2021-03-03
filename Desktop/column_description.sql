@@ -1,11 +1,74 @@
- SELECT n.nspname AS schema_name,
-    c.relname AS table_name,
-    a.attname AS column_name,
-    d.description
-   FROM pg_class c
-     JOIN pg_attribute a ON c.oid = a.attrelid
-     LEFT JOIN pg_namespace n ON n.oid = c.relnamespace
-     LEFT JOIN pg_tablespace t ON t.oid = c.reltablespace
-     LEFT JOIN pg_description d ON d.objoid = c.oid AND d.objsubid = a.attnum
-  WHERE (c.relkind = ANY (ARRAY['r'::"char", 'v'::"char"])) AND (n.nspname <> ALL (ARRAY['mdclog'::name, 'information_schema'::name, 'pg_catalog'::name])) AND n.nspname !~~ '%pg_temp_%'::text AND (a.attname <> ALL (ARRAY['ctid'::name, 'cmax'::name, 'cmin'::name, 'xmax'::name, 'xmin'::name, 'tableoid'::name]))
-  ORDER BY n.nspname, c.relname, a.attname;
+
+ WITH CTE1
+AS (
+	SELECT SC.TABLE_NAME
+		,SC.COLUMN_NAME
+		,CASE 
+			WHEN SC.DOMAIN_NAME IS NOT NULL
+				THEN SC.DOMAIN_NAME
+			WHEN SC.DATA_TYPE = 'character varying'
+				THEN 'character varying(' || SC.CHARACTER_MAXIMUM_LENGTH || ')'
+			WHEN SC.DATA_TYPE = 'character'
+				THEN 'character(' || SC.CHARACTER_MAXIMUM_LENGTH || ')'
+			WHEN SC.DATA_TYPE = 'numeric' THEN
+				case 
+	             when SC.NUMERIC_PRECISION is null or SC.NUMERIC_SCALE is null
+				then 'numeric'
+				else  'numeric(' || SC.NUMERIC_PRECISION || ',' || SC.NUMERIC_SCALE || ')' 
+				end
+	
+			ELSE SC.DATA_TYPE
+			END AS DATA_TYPE
+		,SC.IS_NULLABLE
+		,CASE 
+			WHEN TC.CONSTRAINT_TYPE = 'PRIMARY KEY'
+				THEN 'Y'
+			ELSE 'N'
+			END AS IS_PK
+		,CASE 
+			WHEN TC.CONSTRAINT_TYPE = 'FOREIGN KEY'
+				THEN 'Y'
+			ELSE 'N'
+			END AS IS_FK 
+	FROM INFORMATION_SCHEMA.COLUMNS SC
+	LEFT JOIN INFORMATION_SCHEMA.KEY_COLUMN_USAGE ISKC ON SC.COLUMN_NAME = ISKC.COLUMN_NAME
+		AND ISKC.TABLE_NAME = SC.TABLE_NAME
+	LEFT JOIN INFORMATION_SCHEMA.TABLE_CONSTRAINTS TC ON ISKC.CONSTRAINT_NAME = TC.CONSTRAINT_NAME
+	LEFT JOIN PG_STATIO_ALL_TABLES PS ON PS.RELNAME = SC.TABLE_NAME
+	LEFT JOIN PG_DESCRIPTION PD ON PS.RELID = PD.OBJOID --AND pd.objsubid = a.attnum
+	--WHERE sc.table_name = 'deb_testing2' --table name
+	),
+CTE2 
+AS (
+	SELECT N.NSPNAME AS SCHEMA_NAME
+		,C.RELNAME AS TABLE_NAME
+		,A.ATTNAME AS COLUMN_NAME
+		,D.DESCRIPTION
+	FROM PG_CLASS C
+	JOIN PG_ATTRIBUTE A ON C.OID = A.ATTRELID
+	LEFT JOIN PG_NAMESPACE N ON N.OID = C.RELNAMESPACE
+	LEFT JOIN PG_TABLESPACE T ON T.OID = C.RELTABLESPACE
+	LEFT JOIN PG_DESCRIPTION D ON D.OBJOID = C.OID
+		AND D.OBJSUBID = A.ATTNUM --join information_schema.columns isc on d.objsubid=isc.ordinal_position
+	WHERE (C.RELKIND = ANY (ARRAY ['r'::"char",'v'::"char"]))
+		AND (N.NSPNAME <> ALL (ARRAY ['information_schema'::NAME,'pg_catalog'::NAME]))
+		AND N.NSPNAME !~~ '%pg_temp_%'::TEXT
+		AND (A.ATTNAME <> ALL (ARRAY ['ctid'::NAME,'cmax'::NAME,'cmin'::NAME,'xmax'::NAME,'xmin'::NAME,'tableoid'::NAME])) 
+	  --  AND c.relname = 'deb_testing2' -- table name
+	ORDER BY N.NSPNAME
+		,C.RELNAME
+		,A.ATTNAME)
+SELECT distinct
+	C2.SCHEMA_NAME,
+	C1.TABLE_NAME
+	,C1.COLUMN_NAME
+	,C1.DATA_TYPE
+	,C1.IS_NULLABLE
+	,C1.IS_PK
+	,C1.IS_FK
+	,C2.DESCRIPTION
+FROM CTE1 C1
+JOIN CTE2 C2 ON C1.TABLE_NAME = C2.TABLE_NAME
+	AND C1.COLUMN_NAME = C2.COLUMN_NAME
+WHERE C2.SCHEMA_NAME = '<schema_name>'	;
+	
