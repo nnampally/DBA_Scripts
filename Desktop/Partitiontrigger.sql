@@ -1,8 +1,8 @@
--- FUNCTION: child_tables.func_inventory_movement_insert_trigger()
+-- FUNCTION: public.func_inventory_movement_insert_trigger()
 
--- DROP FUNCTION child_tables.func_inventory_movement_insert_trigger();
+-- DROP FUNCTION public.func_inventory_movement_insert_trigger();
 
-CREATE FUNCTION child_tables.func_inventory_movement_insert_trigger()
+CREATE FUNCTION public.func_inventory_movement_insert_trigger()
     RETURNS trigger
     LANGUAGE 'plpgsql'
     COST 100
@@ -23,11 +23,11 @@ DECLARE
       m_ := to_char(NEW.report_date::date,'MM');
 	  y_ := to_char(NEW.report_date,'YYYY');
       c_table := TG_TABLE_NAME || '_' || 'y'||y_||'m'||m_;
-	  c_table1 := 'child_tables.' || c_table;
+	  c_table1 := 'public.' || c_table;
       m_table1 := 'core.'||TG_TABLE_NAME;
       IF NOT EXISTS(SELECT relname FROM pg_class WHERE relname=c_table) THEN
 	
-      RAISE NOTICE 'values out of range partition, creating  partition table:  child_tables.%',c_table;
+      RAISE NOTICE 'values out of range partition, creating  partition table:  public.%',c_table;
 		
 	    r1 := y_||'-'|| m_||'-01';
 		r2 := y_||'-'|| cast(m_ as integer)+1 ||'-01';
@@ -35,7 +35,7 @@ DECLARE
 		IF cast(m_ as integer) = 12 then r2 := y_+1||'-01-01'  ; 
 		END IF;
 		chk_cond := 'report_date >= '''|| r1 ||''' AND report_date < ''' || r2 || '''';
-        EXECUTE 'CREATE TABLE child_tables.' || c_table || '(check ('|| chk_cond||')) INHERITS (' ||'core.'|| TG_TABLE_NAME || ');';
+        EXECUTE 'CREATE TABLE public.' || c_table || '(check ('|| chk_cond||')) INHERITS (' ||'core.'|| TG_TABLE_NAME || ');';
 		-- Create index on new child table
 
         EXECUTE  'Create index on ' || c_table1 ||'(report_date);';
