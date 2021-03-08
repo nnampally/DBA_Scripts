@@ -1,15 +1,15 @@
--- FUNCTION: func_inventory_movement_insert_trigger()
+-- FUNCTION: child_tables.func_inventory_movement_insert_trigger()
 
--- DROP FUNCTION func_inventory_movement_insert_trigger();
+-- DROP FUNCTION child_tables.func_inventory_movement_insert_trigger();
 
-CREATE FUNCTION func_inventory_movement_insert_trigger()
+CREATE FUNCTION child_tables.func_inventory_movement_insert_trigger()
     RETURNS trigger
     LANGUAGE 'plpgsql'
     COST 100
     VOLATILE NOT LEAKPROOF
 AS $BODY$
 DECLARE
-      m_ int;
+      m_ varchar(3);
 	  y_ bigint;
 	  r1 text;
 	  r2 text;
@@ -17,30 +17,25 @@ DECLARE
 	  c_table TEXT;
 	  c_table1 text;
 	  m_table1 text;
-	 
     
     BEGIN
 
-      m_ := to_char(NEW.report_date,'MM');
+      m_ := to_char(NEW.report_date::date,'MM');
 	  y_ := to_char(NEW.report_date,'YYYY');
       c_table := TG_TABLE_NAME || '_' || 'y'||y_||'m'||m_;
-	  --raise info '%',c_table;
 	  c_table1 := 'child_tables.' || c_table;
-	  --raise info '%',c_table1;
       m_table1 := 'core.'||TG_TABLE_NAME;
-	  -- raise info '%',m_table1;
-
       IF NOT EXISTS(SELECT relname FROM pg_class WHERE relname=c_table) THEN
 	
       RAISE NOTICE 'values out of range partition, creating  partition table:  child_tables.%',c_table;
 		
 	    r1 := y_||'-'|| m_||'-01';
-		r2 := y_||'-'|| m_+1 ||'-01';
+		r2 := y_||'-'|| cast(m_ as integer)+1 ||'-01';
 		
-		IF m_ = 12 then r2 := y_+1||'-01-01'  ; 
+		IF cast(m_ as integer) = 12 then r2 := y_+1||'-01-01'  ; 
 		END IF;
 		chk_cond := 'report_date >= '''|| r1 ||''' AND report_date < ''' || r2 || '''';
-        EXECUTE 'CREATE TABLE ' || c_table || '(check ('|| chk_cond||')) INHERITS (' ||'core.'|| TG_TABLE_NAME || ');';
+        EXECUTE 'CREATE TABLE child_tables.' || c_table || '(check ('|| chk_cond||')) INHERITS (' ||'core.'|| TG_TABLE_NAME || ');';
 		-- Create index on new child table
 
         EXECUTE  'Create index on ' || c_table1 ||'(report_date);';
@@ -60,11 +55,3 @@ DECLARE
       RETURN NULL;
     END;
 $BODY$;
-
-
-CREATE TRIGGER insert_core_inventory_movement_trigger
-    BEFORE INSERT, update,delete
-    ON core.inventory_movement
-    FOR EACH ROW
-    EXECUTE PROCEDURE func_inventory_movement_insert_trigger();
-
