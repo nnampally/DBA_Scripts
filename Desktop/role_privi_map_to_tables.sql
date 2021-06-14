@@ -1,12 +1,14 @@
-select distinct a.oid as user_role_id
-, a.rolname as user_role_name
---, b.roleid as other_role_id
-, c.rolname as member_of
-,  array_to_string(array_agg(distinct d.privilege_type),',') as privilege
-,d.table_schema||'.'||d.table_name as tablename
-from pg_roles a
-inner join pg_auth_members b on a.oid=b.member
-inner join pg_roles c on b.roleid=c.oid 
-left join information_schema.role_table_grants d on d.grantee = c.rolname
-where a.rolname not in ('pg_monitor','rds_superuser','rds_superuser')
-group by 1,2,3,5
+SELECT
+    DISTINCT A.ROLNAME AS USER_ROLE_NAME,
+    C.ROLNAME AS MEMBER_OF,
+    ARRAY_TO_STRING(ARRAY_AGG(DISTINCT D.PRIVILEGE_TYPE),',') AS PRIVILEGE,
+    D.TABLE_SCHEMA || '.' || D.TABLE_NAME AS TABLENAME
+FROM PG_ROLES A
+INNER JOIN PG_AUTH_MEMBERS B ON A.OID = B.MEMBER
+INNER JOIN PG_ROLES C ON B.ROLEID = C.OID
+LEFT JOIN INFORMATION_SCHEMA.ROLE_TABLE_GRANTS D ON D.GRANTEE = C.ROLNAME
+WHERE A.ROLNAME not in ('pg_monitor','rds_superuser','rds_superuser')
+    AND D.TABLE_NAME IS NOT NULL
+   --AND C.ROLNAME != 'admin'
+   AND D.PRIVILEGE_TYPE != 'SELECT' 
+GROUP BY 1,2,4;
