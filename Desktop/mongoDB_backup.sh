@@ -5,7 +5,7 @@ export PATH=/bin:/usr/bin:/usr/local/bin
 TODAY=`date +"%d%b%Y"`
  
 
-DB_BACKUP_PATH='/Users/nampally/Downloads'
+DB_BACKUP_PATH='/Users/Downloads'
 MONGO_HOST='localhost'
 MONGO_PORT='27017'
 
