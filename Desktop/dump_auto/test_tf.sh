@@ -5,11 +5,11 @@ read schema_name
 #echo $schema_name
 echo "Dump type Tables/Functions/Sequences/Triggers/Views: "
 read sub_dir
-host="tmo-eds-prd-hyperlake-cluster.cluster-ro-crondmz09l1n.us-west-2.rds.amazonaws.com"
+host="<>"
 user="edsadmin"
 db="ohl"
-export PGPASSFILE='/Users/nampally/.pgpass' #'~/.pgpass'
-export targetdir='/Users/nampally/Desktop/OHL-Postgres'
+export PGPASSFILE='/Users/.pgpass' #'~/.pgpass'
+export targetdir='/Users/Desktop/OHL-Postgres'
 echo $targetdir
 cd $targetdir
 
@@ -61,25 +61,7 @@ elif  [ $sub_dir == 'Functions' ]; then
                             || pg_get_functiondef(p.oid) || ';
 
 
-                            ALTER FUNCTION ' || ns.nspname||'.'||proname||'() 
-
-                            OWNER TO gp_eds_owner;
-                            '
-
-                            || 'GRANT EXECUTE ON FUNCTION '|| ns.nspname||'.'||proname||'() TO PUBLIC;
-                            '
-
-                            ||'GRANT EXECUTE ON FUNCTION ' || ns.nspname||'.'||proname||'() TO gp_eds_etl;
-                            '
-
-                            ||'GRANT EXECUTE ON FUNCTION ' || ns.nspname||'.'||proname||'()  TO gp_eds_owner;
-                            '
-
-                            ||'GRANT EXECUTE ON FUNCTION ' || ns.nspname||'.'||proname||'()  TO svc_eds_spark;
-                            '
-
-                            ||'GRANT EXECUTE ON FUNCTION ' || ns.nspname||'.'||proname||'()  TO svc_tpr_ohl;
-                            '
+                          
                             as function
 
                             FROM pg_proc p
