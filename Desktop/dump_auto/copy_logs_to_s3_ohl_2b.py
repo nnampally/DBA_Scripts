@@ -9,8 +9,8 @@ from datetime import datetime
 
 def print_usage():
 	print ("Usage:\copy_logs_to_s3_ohl_2b.py\n" + \
-				"\t--bucketname tmo-eds-w2-prd-ohl-logs\n" + \
-				"\t--rdsinstancename tmo-eds-prd-hyperlake-us-west-2b\n" + \
+				"\t--bucketname <bucket name>\n" + \
+				"\t--rdsinstancename <instance name>\n" + \
 				"\t--lognameprefix error/postgresql.log\n" + \
 				"\t--region us-west-2")
 
@@ -152,7 +152,7 @@ def copy_logs_from_RDS_to_S3():
 
 config = {}
 
-config = {'BucketName': "tmo-eds-w2-prd-ohl-logs", 'RDSInstanceName': "tmo-eds-prd-hyperlake-us-west-2b", 'LogNamePrefix': "error/postgresql.log", 'Region': "us-west-2"}
+config = {'BucketName': "<Bucket name>", 'RDSInstanceName': "<Instance name>", 'LogNamePrefix': "error/postgresql.log", 'Region': "us-west-2"}
 
 if(parse_args(sys.argv)):
 	copy_logs_from_RDS_to_S3();
