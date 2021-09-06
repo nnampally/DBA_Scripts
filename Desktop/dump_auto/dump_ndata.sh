@@ -8,7 +8,7 @@ read sub_dir
 host="<>"
 user="edsadmin"
 db="ohl"
-export PGPASSFILE='/Users/.pgpass' #/Users/nampally/.pgpass
+export PGPASSFILE='/Users/.pgpass' 
 export targetdir='/Users/Desktop/OHL-Postgres'
 echo $targetdir
 cd $targetdir
