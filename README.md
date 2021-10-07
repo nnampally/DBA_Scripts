@@ -1,3 +1,3 @@
-# p_d_b_scripts-
+# PostgreSQL DBA scripts -
 
 DBA handy scripts.
