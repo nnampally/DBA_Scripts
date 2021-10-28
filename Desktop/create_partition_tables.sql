@@ -22,14 +22,14 @@ v_intervel int;
 ---
 --
 --
-      p_parent_table text:='public.test4';
-      p_part_col text:='id' ;--partition COLUMN
+      p_parent_table text:='public.test5';
+      p_part_col text:='dt' ;--partition COLUMN
       p_type text:='range';  -- partition type range,hash
-      p_interval text:='20' ; --time:  daily, monthly, querterly,yearly , id : 10,1000 any range
+      p_interval text:='daily' ; --time:  daily, monthly,yearly , id : 10,1000 any range
       p_fk_cols text:='id'; -- constraint COLUMN
       p_uk_cols text:='id';
      -- p_constraint_type text[] DEFAULT NULL  -- constraint type PK,UK
-      p_premake int:=5 ;-- no of partition tables to be created
+      p_premake int:=6 ;-- no of partition tables to be created
       --p_inherit_fk boolean DEFAULT true
       --p_epoch text DEFAULT 'none'
      -- p_upsert text DEFAULT ''
@@ -65,19 +65,19 @@ WHERE n.nspname = v_parent_schema::name
 AND c.relname = v_parent_tablename::name
 AND a.attname = p_part_col::name;
 
-IF v_parent_tablename IS NULL THEN 
+IF v_parent_tablename IS NULL THEN
             RAISE EXCEPTION '42P01 : Unable to find given parent table in system catalogs. Please create parent table first, Ex: CREATE TABLE % () PARTITION BY % (%);', p_parent_table,p_type,p_part_col;
 END IF;
 
 IF p_type = 'range' THEN
         IF v_control_type = 'time' then
            IF  p_interval = 'daily' THEN
-   
+
                EXECUTE FORMAT( 'CREATE TABLE  IF NOT EXISTS %s_default PARTITION OF %s default'
                    ,v_parent_tablename, p_parent_table);
                 -- for backlog date
                SELECT current_date - interval '2 day' into v_start_time;
-     
+
                for v_k in 1..p_premake loop
                      end_date= v_start_time+1;
                          r1 := v_parent_tablename||'_p'||to_char(v_start_time,'MMDD')::text;
@@ -88,10 +88,28 @@ IF p_type = 'range' THEN
                                               FOR VALUES FROM (''%s'') TO (''%s'')',r1, p_parent_table,r1,p_fk_cols,v_start_time,end_date);
                          END IF;
                      v_start_time=end_date;
-               end loop; 
-    
-            END IF;  -- daily
-        ELSE      -- id 
+               end loop;
+            ELSIF p_interval = 'monthly' THEN
+
+               EXECUTE FORMAT( 'CREATE TABLE  IF NOT EXISTS %s_default PARTITION OF %s default'
+                   ,v_parent_tablename, p_parent_table);
+                -- for backlog date
+               v_start_time=to_char(v_start_time,'YYYY-MM-01');
+               for v_k in 1..p_premake loop
+                     end_date= v_start_time + interval '1 month';
+                         r1 := v_parent_tablename||'_p'||to_char(v_start_time,'MM_DD')::text;
+                         IF p_fk_cols is null then
+                            EXECUTE FORMAT( 'CREATE TABLE  IF NOT EXISTS %s PARTITION OF %s FOR VALUES FROM (''%s'') TO (''%s'')',r1, p_parent_table,v_start_time,end_date);
+                         ELSE
+                            EXECUTE FORMAT( 'CREATE TABLE  IF NOT EXISTS %s PARTITION OF %s ( CONSTRAINT %s_pkey PRIMARY KEY (%s) )
+                                              FOR VALUES FROM (''%s'') TO (''%s'')',r1, p_parent_table,r1,p_fk_cols,v_start_time,end_date);
+                         END IF;
+                     v_start_time=end_date;
+               end loop;
+            ELSIF p_interval = 'yearly' THEN
+            raise info 'Not compatable for now';
+            END IF;  -- monthly
+        ELSE     -- id
             v_intervel := p_interval::int;
             num_s = v_intervel;
             EXECUTE FORMAT( 'CREATE TABLE  IF NOT EXISTS %s_default PARTITION OF %s default'
