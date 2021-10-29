@@ -40,13 +40,9 @@ DECLARE
 
         EXECUTE  'Create index on ' || c_table1 ||'(report_date);';
 
-        EXECUTE 'ALTER TABLE '||c_table1 ||' OWNER to gp_eds_owner;'; 
+        EXECUTE 'ALTER TABLE '||c_table1 ||' OWNER to postgres;'; 
 
-        EXECUTE 'GRANT ALL ON TABLE '||c_table1 ||' TO gp_eds_etl;';
-
-        EXECUTE 'GRANT ALL ON TABLE '||c_table1 ||' TO gp_eds_platform_ops;';
-
-        EXECUTE 'GRANT SELECT ON TABLE '||c_table1 ||' TO gp_eds_readonly;';
+        EXECUTE 'GRANT SELECT ON TABLE '||c_table1 ||' TO readonly;';
 
        END IF;
 	  
