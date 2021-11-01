@@ -1,6 +1,5 @@
 DO $BODY$
 DECLARE
-      m_ text;
 	  num_s bigint;
       num_e bigint;
 	  r1 text;
@@ -13,19 +12,21 @@ DECLARE
       v_k int;
       v_start_time date;
       v_parent_schema                 text;
-      v_parent_tablename              text;
+      v_parent_tablename              text; 
       v_parent_tablespace             text;
       v_unlogged             text;
       v_control_type                  text;
-v_control_exact_type            text;
-v_intervel int;
+      v_control_exact_type            text;
+      v_intervel int;
+      v_agg text[];
+      v_list text;
 ---
 --
 --
       p_parent_table text:='public.test5';
-      p_part_col text:='dt' ;--partition COLUMN
-      p_type text:='range';  -- partition type range,hash
-      p_interval text:='daily' ; --time:  daily, monthly,yearly , id : 10,1000 any range
+      p_part_col text:='region' ;--partition COLUMN
+      p_type text:='list';  -- partition type range,hash
+      p_interval text:='west,east,north,south' ; --time:  daily, monthly,yearly , id : 10,1000 any range, list = 'a,b,c,d'
       p_fk_cols text:='id'; -- constraint COLUMN
       p_uk_cols text:='id';
      -- p_constraint_type text[] DEFAULT NULL  -- constraint type PK,UK
@@ -68,6 +69,7 @@ AND a.attname = p_part_col::name;
 IF v_parent_tablename IS NULL THEN
             RAISE EXCEPTION '42P01 : Unable to find given parent table in system catalogs. Please create parent table first, Ex: CREATE TABLE % () PARTITION BY % (%);', p_parent_table,p_type,p_part_col;
 END IF;
+
 
 IF p_type = 'range' THEN
         IF v_control_type = 'time' then
@@ -133,7 +135,24 @@ IF p_type = 'range' THEN
         END IF; -- range  type end
 
 ELSIF  p_type = 'list' THEN
-        RAISE NOTICE 'pass';
+    EXECUTE FORMAT( 'CREATE TABLE  IF NOT EXISTS %s_default PARTITION OF %s default' ,v_parent_tablename, p_parent_table);
+    v_agg = string_to_array(p_interval,',');
+    
+    IF p_fk_cols is null THEN
+        foreach v_list in array v_agg loop
+            v_parent_tablename := p_parent_table||'_p_'||v_list;
+            --RAISE NOTICE '%,%,%',v_parent_tablename, p_parent_table,v_list;
+            EXECUTE FORMAT('CREATE TABLE IF NOT exists %s PARTITION OF %s FOR VALUES IN (''%s'')',v_parent_tablename,p_parent_table,v_list);
+        END LOOP;
+    ELSE 
+       foreach v_list in array v_agg loop
+            v_parent_tablename := p_parent_table||'_p_'||v_list;
+            --RAISE NOTICE '%,%,%',v_parent_tablename, p_parent_table,v_list;
+            EXECUTE FORMAT('CREATE TABLE IF NOT exists %s PARTITION OF %s (CONSTRAINT %s_pkey PRIMARY KEY (%s)) FOR VALUES IN (''%s'')',v_parent_tablename,p_parent_table,v_list,p_fk_cols,v_list);
+        END LOOP;
+    END IF;
+
+
 ELSIF  p_type = 'hash' THEN
         RAISE NOTICE 'pass';
 END IF;
