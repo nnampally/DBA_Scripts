@@ -20,6 +20,7 @@ DECLARE
       v_intervel int;
       v_agg text[];
       v_list text;
+      v_sql_default text;
 ---
 --
 --
@@ -70,13 +71,14 @@ IF v_parent_tablename IS NULL THEN
             RAISE EXCEPTION '42P01 : Unable to find given parent table in system catalogs. Please create parent table first, Ex: CREATE TABLE % () PARTITION BY % (%);', p_parent_table,p_type,p_part_col;
 END IF;
 
+v_sql_default := FORMAT( 'CREATE TABLE  IF NOT EXISTS %s_default PARTITION OF %s default'
+                ,v_parent_tablename, p_parent_table);  --  create default partition table
 
 IF p_type = 'range' THEN
         IF v_control_type = 'time' then
            IF  p_interval = 'daily' THEN
 
-               EXECUTE FORMAT( 'CREATE TABLE  IF NOT EXISTS %s_default PARTITION OF %s default'
-                   ,v_parent_tablename, p_parent_table);
+               EXECUTE  v_sql_default;
                 -- for backlog date
                SELECT current_date - interval '2 day' into v_start_time;
 
@@ -93,8 +95,7 @@ IF p_type = 'range' THEN
                end loop;
             ELSIF p_interval = 'monthly' THEN
 
-               EXECUTE FORMAT( 'CREATE TABLE  IF NOT EXISTS %s_default PARTITION OF %s default'
-                   ,v_parent_tablename, p_parent_table);
+               EXECUTE  v_sql_default;
                 -- for backlog date
                v_start_time=to_char(v_start_time,'YYYY-MM-01');
                for v_k in 1..p_premake loop
@@ -135,19 +136,18 @@ IF p_type = 'range' THEN
         END IF; -- range  type end
 
 ELSIF  p_type = 'list' THEN
-    EXECUTE FORMAT( 'CREATE TABLE  IF NOT EXISTS %s_default PARTITION OF %s default' ,v_parent_tablename, p_parent_table);
+   EXECUTE  v_sql_default;
+   -- EXECUTE FORMAT( 'CREATE TABLE  IF NOT EXISTS %s_default PARTITION OF %s default' ,v_parent_tablename, p_parent_table);
     v_agg = string_to_array(p_interval,',');
     
     IF p_fk_cols is null THEN
         foreach v_list in array v_agg loop
             v_parent_tablename := p_parent_table||'_p_'||v_list;
-            --RAISE NOTICE '%,%,%',v_parent_tablename, p_parent_table,v_list;
             EXECUTE FORMAT('CREATE TABLE IF NOT exists %s PARTITION OF %s FOR VALUES IN (''%s'')',v_parent_tablename,p_parent_table,v_list);
         END LOOP;
     ELSE 
        foreach v_list in array v_agg loop
             v_parent_tablename := p_parent_table||'_p_'||v_list;
-            --RAISE NOTICE '%,%,%',v_parent_tablename, p_parent_table,v_list;
             EXECUTE FORMAT('CREATE TABLE IF NOT exists %s PARTITION OF %s (CONSTRAINT %s_pkey PRIMARY KEY (%s)) FOR VALUES IN (''%s'')',v_parent_tablename,p_parent_table,v_list,p_fk_cols,v_list);
         END LOOP;
     END IF;
