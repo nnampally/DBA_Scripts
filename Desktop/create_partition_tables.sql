@@ -24,11 +24,11 @@ DECLARE
 ---
 --
 --
-      p_parent_table text:='public.test5';
+      p_parent_table text:='public.test6';
       p_part_col text:='region' ;--partition COLUMN
-      p_type text:='list';  -- partition type range,hash
-      p_interval text:='west,east,north,south' ; --time:  daily, monthly,yearly , id : 10,1000 any range, list = 'a,b,c,d'
-      p_fk_cols text:='id'; -- constraint COLUMN
+      p_type text:='hash';  -- partition type range,list, hash
+      p_interval text:='20' ; --time:  daily, monthly,yearly , id : 10,1000 any range, list = 'a,b,c,d', maduler = 5,10,20 etc
+      p_fk_cols text:=null; -- constraint COLUMN
       p_uk_cols text:='id';
      -- p_constraint_type text[] DEFAULT NULL  -- constraint type PK,UK
       p_premake int:=6 ;-- no of partition tables to be created
@@ -149,12 +149,27 @@ ELSIF  p_type = 'list' THEN
        foreach v_list in array v_agg loop
             v_parent_tablename := p_parent_table||'_p_'||v_list;
             EXECUTE FORMAT('CREATE TABLE IF NOT exists %s PARTITION OF %s (CONSTRAINT %s_pkey PRIMARY KEY (%s)) FOR VALUES IN (''%s'')',v_parent_tablename,p_parent_table,v_list,p_fk_cols,v_list);
+
         END LOOP;
     END IF;
 
 
 ELSIF  p_type = 'hash' THEN
-        RAISE NOTICE 'pass';
+        v_k := p_interval::int;
+
+        IF p_fk_cols is not null THEN
+           
+            for num_s in 0..v_k-1 loop
+            execute FORMAT('CREATE TABLE IF NOT EXISTS %s_%s PARTITION OF %s( CONSTRAINT %s_%s_pkey PRIMARY KEY (%s)) 
+             FOR VALUES WITH (modulus %s, remainder %s)',v_parent_tablename,num_s,p_parent_table,v_parent_tablename,num_s,p_fk_cols,v_k,num_s);
+            end loop;
+        ELSE
+            for num_s in 0..v_k-1 loop
+            execute FORMAT('CREATE TABLE IF NOT EXISTS %s_%s PARTITION OF %s 
+            FOR VALUES WITH (modulus %s, remainder %s)',v_parent_tablename,num_s,p_parent_table,v_k,num_s);
+            end loop;
+       --
+    END IF;
 END IF;
 
 
