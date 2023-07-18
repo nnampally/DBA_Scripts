@@ -173,12 +173,6 @@ CREATE OR REPLACE VIEW dba_tables AS
      LEFT JOIN pg_tablespace t ON t.oid = c.reltablespace
   WHERE c.relkind = 'r'::"char";
 
-ALTER TABLE dba_tables
-    OWNER TO gp_eds_platform_ops;
-
-GRANT ALL ON TABLE dba_tables TO gp_eds_etl;
-GRANT ALL ON TABLE dba_tables TO gp_eds_platform_ops;
-GRANT SELECT ON TABLE dba_tables TO gp_eds_readonly;
 
 
 -- View: dba_tables_sizes
