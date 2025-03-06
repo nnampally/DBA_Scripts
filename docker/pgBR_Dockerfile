@@ -38,7 +38,12 @@ RUN yum update -y && \
     yum clean all
 
 # Create necessary directories and set permissions
-RUN mkdir -p -m 770 /var/lib/pgsql/data /var/lib/pgsql/archive /var/log/pgbackrest /var/log/postgresql /etc/pgbackrest/conf.d && \
+RUN mkdir -p  -m 770 \ 
+    /var/lib/pgsql/data \
+    /var/lib/pgsql/archive \
+    /var/log/postgresql \
+    /var/log/pgbackrest \
+    /etc/pgbackrest/conf.d && \
     chown -R postgres:postgres /var/lib/pgsql /var/log/pgbackrest /var/log/postgresql /etc/pgbackrest && \
     touch /etc/pgbackrest/pgbackrest.conf && \
     chmod 640 /etc/pgbackrest/pgbackrest.conf && \
