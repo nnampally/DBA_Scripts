@@ -1,0 +1,106 @@
+# Builder stage: Install dependencies and build pgBackRest
+FROM amazonlinux:2023 AS builder
+
+# Install necessary dependencies for building pgBackRest
+RUN yum update -y && \
+    yum install -y make gcc tar gzip meson ninja-build wget openssl-devel libxml2-devel lz4-devel \
+    libzstd-devel bzip2-devel libyaml-devel libssh2-devel libpq-devel
+
+# Set the working directory and download pgBackRest source
+
+ARG pgbr_version=2.54.2
+
+WORKDIR /build
+RUN wget -q -O - https://github.com/pgbackrest/pgbackrest/archive/release/${pgbr_version}.tar.gz | tar zx -C /build && \
+    meson setup pgbackrest pgbackrest-release-${pgbr_version} && \
+    ninja -C pgbackrest && \
+    ninja -C pgbackrest install
+
+# Main stage: Use Amazon Linux and install PostgreSQL and pgBackRest
+FROM amazonlinux:2023
+
+# Set environment variables for PostgreSQL and pgBackRest
+ARG Cluster=Cluster10
+
+ENV Cluster=${Cluster} \
+    PGDATA=/var/lib/pgsql/data \
+    PGUSER=postgres \
+    PGPORT=5432
+
+# Install PostgreSQL and dependencies
+RUN yum update -y && \
+    yum install -y \
+    postgresql15-server \
+    postgresql15-contrib \
+    openssh-clients make gcc tar meson ninja-build wget sudo \
+    openssl libxml2-devel lz4-devel libzstd-devel bzip2-devel \
+    libyaml-devel libssh2-devel libpq-devel && \
+    yum clean all
+
+# Create necessary directories and set permissions
+RUN mkdir -p -m 770 /var/lib/pgsql/data /var/lib/pgsql/archive /var/log/pgbackrest /var/log/postgresql /etc/pgbackrest/conf.d && \
+    chown -R postgres:postgres /var/lib/pgsql /var/log/pgbackrest /var/log/postgresql /etc/pgbackrest && \
+    touch /etc/pgbackrest/pgbackrest.conf && \
+    chmod 640 /etc/pgbackrest/pgbackrest.conf && \
+    chown postgres:postgres /etc/pgbackrest/pgbackrest.conf
+
+# Copy pgBackRest from the builder stage
+COPY --from=builder /usr/local/bin/pgbackrest /usr/local/bin/
+
+# Initialize PostgreSQL and configure settings
+RUN sudo -u postgres initdb -D /var/lib/pgsql/data && \
+    sed -i 's/#wal_level = .*/wal_level = replica/g' /var/lib/pgsql/data/postgresql.conf && \
+    sed -i 's/#archive_mode = .*/archive_mode = on/g' /var/lib/pgsql/data/postgresql.conf && \
+    sed -i "s|#archive_command = .*|archive_command = 'pgbackrest --stanza=Cluster10 archive-push %p'|g" /var/lib/pgsql/data/postgresql.conf && \
+    sed -i 's/#max_wal_senders = .*/max_wal_senders = 10/g' /var/lib/pgsql/data/postgresql.conf && \
+    sed -i 's/#wal_keep_size = .*/wal_keep_size = 16MB/g' /var/lib/pgsql/data/postgresql.conf && \
+    sed -i 's/#max_wal_size = .*/max_wal_size = 1GB/g' /var/lib/pgsql/data/postgresql.conf && \
+    sed -i 's/#checkpoint_timeout = .*/checkpoint_timeout = 30min/g' /var/lib/pgsql/data/postgresql.conf && \
+    sed -i 's/#archive_timeout = .*/archive_timeout = 60/g' /var/lib/pgsql/data/postgresql.conf && \
+    sed -i "s|#log_directory = .*|log_directory = '/var/log/postgresql'|g" /var/lib/pgsql/data/postgresql.conf && \
+    sed -i "s/#log_filename = .*/log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log'/g" /var/lib/pgsql/data/postgresql.conf && \
+    sed -i "s/#log_statement = .*/log_statement = 'ddl'/g" /var/lib/pgsql/data/postgresql.conf && \
+    sed -i 's/#log_min_duration_statement = .*/log_min_duration_statement = 5000/g' /var/lib/pgsql/data/postgresql.conf
+
+# Set up pgBackRest configuration
+RUN echo "[${Cluster}]" > /etc/pgbackrest/pgbackrest.conf && \
+    echo "pg1-path=/var/lib/pgsql/data" >> /etc/pgbackrest/pgbackrest.conf && \
+    echo "archive-async=n" >> /etc/pgbackrest/pgbackrest.conf && \
+    echo "repo1-path=/var/lib/pgsql/archive" >> /etc/pgbackrest/pgbackrest.conf && \
+    echo "compress-type=gz" >> /etc/pgbackrest/pgbackrest.conf && \
+    echo "retention-full=2" >> /etc/pgbackrest/pgbackrest.conf && \
+    echo "retention-diff=2" >> /etc/pgbackrest/pgbackrest.conf && \
+    echo "retention-archive=2" >> /etc/pgbackrest/pgbackrest.conf && \
+    echo "[global]" >> /etc/pgbackrest/pgbackrest.conf && \
+    echo "repo1-path=/var/lib/pgbackrest" >> /etc/pgbackrest/pgbackrest.conf && \
+    echo "log-level-console=info" >> /etc/pgbackrest/pgbackrest.conf && \
+    echo "log-level-file=debug" >> /etc/pgbackrest/pgbackrest.conf && \
+    echo "log-level-stderr=info" >> /etc/pgbackrest/pgbackrest.conf && \
+    echo "log-path=/var/log/pgbackrest" >> /etc/pgbackrest/pgbackrest.conf
+
+# Expose PostgreSQL port
+EXPOSE 5432
+
+# Create volume for PostgreSQL data directory
+VOLUME ["/var/lib"]
+
+# Startup script for PostgreSQL and pgBackRest
+RUN echo '#!/bin/bash' > /usr/local/bin/start_cluster.sh && \
+    echo "echo Starting PostgreSQL Server" >> /usr/local/bin/start_cluster.sh && \
+    echo 'postgres -D /var/lib/pgsql/data &' >> /usr/local/bin/start_cluster.sh && \
+    echo 'if [ $? -ne 0 ]; then' >> /usr/local/bin/start_cluster.sh && \
+    echo '  echo "Failed to start PostgreSQL Server"' >> /usr/local/bin/start_cluster.sh && \
+    echo '  exit 1' >> /usr/local/bin/start_cluster.sh && \
+    echo 'fi' >> /usr/local/bin/start_cluster.sh && \
+    echo "echo 'Server started successfully. Waiting 10 seconds...'" >> /usr/local/bin/start_cluster.sh && \
+    echo 'sleep 10' >> /usr/local/bin/start_cluster.sh && \
+    echo "echo 'Creating pgBackRest stanza'" >> /usr/local/bin/start_cluster.sh && \
+    echo "pgbackrest --stanza=${Cluster} stanza-create" >> /usr/local/bin/start_cluster.sh && \
+    echo "pgbackrest --stanza=${Cluster} start" >> /usr/local/bin/start_cluster.sh && \
+    chmod +x /usr/local/bin/start_cluster.sh
+
+# Switch to postgres user
+USER postgres
+
+# Default entrypoint to start the database and pgBackRest
+# ENTRYPOINT ["/usr/local/bin/start_cluster.sh"]
