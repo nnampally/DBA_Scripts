@@ -6,10 +6,10 @@ echo "Dump type tables/functions/sequences/triggers/views/materializedview: "
 read sub_dir
 host="<>"
 echo $host
-user="edsadmin"
-db="ohl"
-export PGPASSFILE='/Users/.pgpass' 
-export targetdir='/Users/Desktop/OHL-Postgres'
+user="<>"
+db="<>"
+export PGPASSFILE='~/.pgpass' 
+export targetdir='~/Postgres_dumps'
 echo $targetdir
 cd $targetdir
 
