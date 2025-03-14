@@ -5,11 +5,11 @@ read schema_name
 #echo $schema_name
 echo "Dump type Tables/Functions/Triggers/Views/Materializedview: "
 read sub_dir
-host="tmo-eds-prd-hyperlake-cluster.cluster-ro-crondmz09l1n.us-west-2.rds.amazonaws.com"
-user="edsadmin"
-db="ohl"
-export PGPASSFILE='/Users/nampally/.pgpass' #/Users/nampally/.pgpass
-export targetdir='/Users/nampally/Desktop/OHL-Postgres' # export targetdir=pwd
+host="<>"
+user="<>"
+db="<>"
+export PGPASSFILE='~/.pgpass' 
+export targetdir='~/Postgres_dumps' # export targetdir=pwd
 echo $targetdir
 cd $targetdir
 
