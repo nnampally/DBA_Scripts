@@ -6,10 +6,10 @@ read schema_name
 echo "Dump type Tables/Functions/Sequences/Triggers/Views: "
 read sub_dir
 host="<>"
-user="edsadmin"
-db="ohl"
+user="<>"
+db="<>"
 export PGPASSFILE='/Users/.pgpass' #'~/.pgpass'
-export targetdir='/Users/Desktop/OHL-Postgres'
+export targetdir='/Users/Desktop/Postgres_dumps'
 echo $targetdir
 cd $targetdir
 
