@@ -16,8 +16,7 @@ where n_dead_tup > 0 and relname =  'tablename' order by n_dead_tup desc;
 --tables in buffer
 SELECT  c.relname,
          pg_size_pretty(count(*) * 8192) as buffered, round(100.0 * count(*) / (SELECT setting FROM pg_settings WHERE name='shared_buffers')::integer,1) AS buffers_percent,
-         round(100.0 * count(*) * 8192 / pg_relation_size(c.oid),1) AS percent_of_relation,
-         round(100.0 * count(*) * 8192 / pg_table_size(c.oid),1) AS percent_of_table
+         round(100.0 * count(*) * 8192 / pg_relation_size(c.oid),1) AS percent_of_relation
 FROM    pg_class c
          INNER JOIN pg_buffercache b
             ON b.relfilenode = c.relfilenode
